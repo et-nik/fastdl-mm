@@ -81,6 +81,12 @@ func (h *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if info.IsDir() {
+		if !strings.HasSuffix(r.URL.Path, "/") {
+			http.Redirect(w, r, r.URL.Path+"/", http.StatusMovedPermanently)
+
+			return
+		}
+
 		if !h.config.AutoIndexEnabled {
 			http.NotFound(w, r)
 

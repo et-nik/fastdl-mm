@@ -53,6 +53,10 @@ func MetaQuery() int {
 		panic("FastDLHost is not set")
 	}
 
+	if cfg.FastDLPort == 0 {
+		setRandomPort(cfg)
+	}
+
 	go runServer(gameDir, cfg)
 
 	engineFuncs.ServerCommand(
@@ -104,23 +108,21 @@ func loadConfig(gameDir string) *Config {
 }
 
 func loadDefaultConfig() *Config {
-	defConf := DefaultConfig
+	return DefaultConfig
+}
 
+func setRandomPort(cfg *Config) {
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		log.Fatalf("Failed to get random port: %s", err.Error())
 	}
 
-	defConf.FastDLPort = uint16(listener.Addr().(*net.TCPAddr).Port)
+	cfg.FastDLPort = uint16(listener.Addr().(*net.TCPAddr).Port)
 
-	defer func(listener net.Listener) {
-		err := listener.Close()
-		if err != nil {
-			log.Fatalf("Failed to close listener: %s", err.Error())
-		}
-	}(listener)
-
-	return defConf
+	err = listener.Close()
+	if err != nil {
+		log.Fatalf("Failed to close listener: %s", err.Error())
+	}
 }
 
 func main() {}
