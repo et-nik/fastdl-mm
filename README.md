@@ -45,28 +45,31 @@ A list of forbidden paths. Files from directories in this list will not be downl
 fastDLHost: "127.0.0.1"
 fastDLPort: 13080
 autoIndexEnabled: true
+forbiddenRegexp:
+  - mapcycle.*
+  - .*textscheme.*
 allowedExtentions:
-  - "lmp"
-  - "lst"
-  - "wad"
-  - "bmp"
-  - "tga"
-  - "jpg"
-  - "jpeg"
-  - "png"
-  - "gif"
-  - "txt"
-  - "zip"
-  - "bsp"
-  - "res"
-  - "wav"
-  - "mp3"
-  - "spr"
+  - lmp
+  - lst
+  - wad
+  - bmp
+  - tga
+  - jpg
+  - jpeg
+  - png
+  - gif
+  - txt
+  - zip
+  - bsp
+  - res
+  - wav
+  - mp3
+  - spr
 allowedPaths:
-  - "gfx"
-  - "maps"
-  - "media"
-  - "models"
-  - "sound"
-  - "sprites"
+  - gfx
+  - maps
+  - media
+  - models
+  - sound
+  - sprites
 ```

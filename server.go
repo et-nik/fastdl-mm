@@ -179,6 +179,10 @@ func (h *fileHandler) pathAllowed(filePath string) bool {
 
 	filePath = strings.TrimPrefix(filePath, "/")
 
+	if strings.HasSuffix(filePath, "addons") {
+		return false
+	}
+
 	for _, r := range h.forbiddenRegexps {
 		if r.MatchString(filePath) {
 			return false

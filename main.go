@@ -73,7 +73,7 @@ func loadConfig(gameDir string) *Config {
 
 	dirs := []string{
 		gameDir,
-		filepath.Join(gameDir, "addons/metamod/fastdl"),
+		filepath.Join(gameDir, "addons/fastdl"),
 	}
 
 	var files []string
