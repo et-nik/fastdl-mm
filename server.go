@@ -44,31 +44,23 @@ func newFileHandler(baseDir string, cfg *Config) *fileHandler {
 	return &fileHandler{
 		baseDir: baseDir,
 		config:  cfg,
+
+		allowedExtensions:   allowedExtensions,
+		forbiddenExtensions: forbiddenExtensions,
+		allowedPaths:        allowedPaths,
+		forbiddenPaths:      forbiddenPaths,
 	}
 }
-
-//var allowedExtensions = map[string]bool{
-//	".txt":  true,
-//	".jpg":  true,
-//	".png":  true,
-//	".json": true,
-//}
-
-//var baseDir string
-
-//func isAllowedExtension(filePath string) bool {
-//	ext := strings.ToLower(filepath.Ext(filePath))
-//	return allowedExtensions[ext]
-//}
 
 func (h *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.baseDir == "" {
 		http.Error(w, "Base directory is not set", http.StatusInternalServerError)
 	}
 
-	requestedPath := filepath.Join(h.baseDir, filepath.Clean(r.URL.Path))
+	requestedPath := filepath.Clean(r.URL.Path)
+	fullPath := filepath.Join(h.baseDir, requestedPath)
 
-	info, err := os.Stat(requestedPath)
+	info, err := os.Stat(fullPath)
 	if err != nil {
 		http.NotFound(w, r)
 
@@ -88,19 +80,25 @@ func (h *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		entries, err := os.ReadDir(requestedPath)
+		entries, err := os.ReadDir(fullPath)
 		if err != nil {
 			http.Error(w, "Failed to read directory", http.StatusInternalServerError)
 			return
 		}
 
-		var items []string
-		for _, entry := range entries {
-			entryPath := filepath.Join(r.URL.Path, entry.Name())
-			fullPath := filepath.Join(requestedPath, entry.Name())
+		items := make([]string, 0, len(entries)+1)
 
-			if entry.IsDir() || h.fileAllowed(fullPath) {
-				items = append(items, entryPath+"/")
+		if requestedPath != "/" {
+			items = append(items, "../")
+		}
+
+		for _, entry := range entries {
+			entryPath := filepath.Join(requestedPath, entry.Name())
+
+			if entry.IsDir() && h.pathAllowed(entryPath) {
+				items = append(items, entry.Name()+"/")
+			} else if h.fileAllowed(entryPath) {
+				items = append(items, entry.Name())
 			}
 		}
 
@@ -119,17 +117,20 @@ func (h *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.fileAllowed(requestedPath) {
+	if !h.fileAllowed(fullPath) {
 		http.NotFound(w, r)
 
 		return
 	}
 
-	http.ServeFile(w, r, requestedPath)
+	http.ServeFile(w, r, fullPath)
 }
 
 func (h *fileHandler) fileAllowed(filePath string) bool {
+	filePath = strings.TrimPrefix(filePath, "/")
+
 	ext := strings.ToLower(filepath.Ext(filePath))
+	ext = strings.TrimPrefix(ext, ".")
 
 	if _, ok := h.forbiddenExtensions[ext]; ok {
 		return false
@@ -144,6 +145,12 @@ func (h *fileHandler) fileAllowed(filePath string) bool {
 }
 
 func (h *fileHandler) pathAllowed(filePath string) bool {
+	if filePath == "/" {
+		return true
+	}
+
+	filePath = strings.TrimPrefix(filePath, "/")
+
 	for path := range h.forbiddenPaths {
 		if strings.HasPrefix(filePath, path) {
 			return false
