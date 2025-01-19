@@ -8,6 +8,7 @@ type Config struct {
 	FastDLHost          string   `yaml:"fastDLHost"`
 	FastDLPort          uint16   `yaml:"fastDLPort"`
 	AutoIndexEnabled    bool     `yaml:"autoIndexEnabled"`
+	ForbiddenRegexp     []string `yaml:"forbiddenRegexp"`
 	ForbiddenExtentions []string `yaml:"forbiddenExtentions"`
 	AllowedExtentions   []string `yaml:"allowedExtentions"`
 	ForbiddenPaths      []string `yaml:"forbiddenPaths"`
@@ -29,6 +30,10 @@ var DefaultConfig = &Config{
 	FastDLHost:       "",
 	FastDLPort:       0,
 	AutoIndexEnabled: true,
+	ForbiddenRegexp: []string{
+		"mapcycle.*",
+		".*textscheme.*",
+	},
 	AllowedExtentions: []string{
 		"lmp",
 		"lst",

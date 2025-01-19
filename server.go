@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -18,6 +19,7 @@ type fileHandler struct {
 	forbiddenExtensions map[string]struct{}
 	allowedPaths        map[string]struct{}
 	forbiddenPaths      map[string]struct{}
+	forbiddenRegexps    []*regexp.Regexp
 }
 
 func newFileHandler(baseDir string, cfg *Config) *fileHandler {
@@ -41,6 +43,16 @@ func newFileHandler(baseDir string, cfg *Config) *fileHandler {
 		forbiddenPaths[path] = struct{}{}
 	}
 
+	forbiddenRegexps := make([]*regexp.Regexp, 0, len(cfg.ForbiddenRegexp))
+	for _, regxp := range cfg.ForbiddenRegexp {
+		r, err := regexp.Compile(regxp)
+		if err != nil {
+			log.Fatalf("Failed to compile regexp %q: %v", regxp, err)
+		}
+
+		forbiddenRegexps = append(forbiddenRegexps, r)
+	}
+
 	return &fileHandler{
 		baseDir: baseDir,
 		config:  cfg,
@@ -49,6 +61,7 @@ func newFileHandler(baseDir string, cfg *Config) *fileHandler {
 		forbiddenExtensions: forbiddenExtensions,
 		allowedPaths:        allowedPaths,
 		forbiddenPaths:      forbiddenPaths,
+		forbiddenRegexps:    forbiddenRegexps,
 	}
 }
 
@@ -141,6 +154,12 @@ func (h *fileHandler) fileAllowed(filePath string) bool {
 		return false
 	}
 
+	for _, r := range h.forbiddenRegexps {
+		if r.MatchString(fileName) {
+			return false
+		}
+	}
+
 	if _, ok := h.forbiddenExtensions[ext]; ok {
 		return false
 	}
@@ -159,6 +178,12 @@ func (h *fileHandler) pathAllowed(filePath string) bool {
 	}
 
 	filePath = strings.TrimPrefix(filePath, "/")
+
+	for _, r := range h.forbiddenRegexps {
+		if r.MatchString(filePath) {
+			return false
+		}
+	}
 
 	for path := range h.forbiddenPaths {
 		if strings.HasPrefix(filePath, path) {

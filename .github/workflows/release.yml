@@ -37,7 +37,7 @@ jobs:
 
       - name: Build
         run: |
-          go build -o fastdl_${{ matrix.goarch }}.so -buildmode=c-shared -ldflags "-X 'github.com/et-nik/fastdl-mm/main.Version=${{ env.APP_VERSION }}' -X 'github.com/et-nik/fastdl-mm/main.BuildDate=${{ env.BUILD_TIME }}'"
+          go build -o fastdl_${{ matrix.goarch }}.so -buildmode=c-shared -ldflags "-X 'main.Version=${{ env.APP_VERSION }}' -X 'main.BuildDate=${{ env.BUILD_TIME }}'"
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
