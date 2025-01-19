@@ -129,8 +129,17 @@ func (h *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *fileHandler) fileAllowed(filePath string) bool {
 	filePath = strings.TrimPrefix(filePath, "/")
 
+	fileName := filepath.Base(filePath)
+	if strings.HasPrefix(fileName, ".") {
+		return false
+	}
+
 	ext := strings.ToLower(filepath.Ext(filePath))
 	ext = strings.TrimPrefix(ext, ".")
+
+	if ext == "cfg" {
+		return false
+	}
 
 	if _, ok := h.forbiddenExtensions[ext]; ok {
 		return false
