@@ -7,13 +7,14 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func init() {
 	err := metamod.SetPluginInfo(&metamod.PluginInfo{
 		InterfaceVersion: metamod.MetaInterfaceVersion,
 		Name:             "FastDL",
-		Version:          Version,
+		Version:          strings.TrimPrefix(Version, "v"),
 		Date:             BuildDate,
 		Author:           "KNiK",
 		Url:              "https://github.com/et-nik/fastdl-mm",
