@@ -120,7 +120,7 @@ func (h *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Path  string
 			Items []string
 		}{
-			Path:  r.URL.Path,
+			Path:  requestedPath,
 			Items: items,
 		})
 		if err != nil {

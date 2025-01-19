@@ -29,7 +29,7 @@ func ParseConfig(in []byte) (*Config, error) {
 var DefaultConfig = &Config{
 	FastDLHost:       "",
 	FastDLPort:       0,
-	AutoIndexEnabled: true,
+	AutoIndexEnabled: false,
 	ForbiddenRegexp: []string{
 		"mapcycle.*",
 		".*textscheme.*",

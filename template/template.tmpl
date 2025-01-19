@@ -7,7 +7,7 @@
 	<h1>Index of {{ .Path }}</h1>
 	<ul>
 		{{ range .Items }}
-		<li><a href="{{ . }}">{{ . }}</a></li>
+		<li><a href="{{ .Path }}/{{ . }}">{{ . }}</a></li>
 		{{ end }}
 	</ul>
 </body>
