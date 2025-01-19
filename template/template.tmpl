@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Index of {{ .Path }}</title>
+</head>
+<body>
+	<h1>Index of {{ .Path }}</h1>
+	<ul>
+		{{ range .Items }}
+		<li><a href="{{ . }}">{{ . }}</a></li>
+		{{ end }}
+	</ul>
+</body>
+</html>
