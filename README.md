@@ -3,6 +3,23 @@
 FastDL Metamod plugin for GoldSrc (Half-Life 1, CS 1.6) servers. 
 This plugin allows you to download files from a web server to the client's computer.
 
+Plugin written with [Metamod-Go](https://github.com/et-nik/metamod-go) library.
+
+## Installation
+
+1. Download the latest release from the [releases page](https://github.com/et-nik/fastdl-mm/releases)
+2. Copy the `fastdl_386.so` file to the `addons/fastdl` directory of your game server
+3. Open `addons/metamod/plugins.ini` file and add the following line:
+```
+linux addons/fastdl/fastdl_386.so
+```
+
+4. Restart the game server
+
+### Optional
+
+5. Create a `fastdl.yaml` file in the `addons/fastdl` directory and configure the plugin (see [Configuration](#configuration))
+
 ## Configuration
 
 You can configure the plugin using the `fastdl.yaml` file. The file can be located in game directory or in the `addons/fastdl` directory.
