@@ -74,7 +74,7 @@ func loadConfig(gameDir string) *Config {
 
 	dirs := []string{
 		gameDir,
-		filepath.Join(gameDir, "addons/fastdl"),
+		filepath.Join(gameDir, "addons", "fastdl"),
 	}
 
 	var files []string
@@ -85,9 +85,8 @@ func loadConfig(gameDir string) *Config {
 	}
 
 	for _, file := range files {
-		path := filepath.Join(gameDir, file)
-		if _, err := os.Stat(path); err == nil {
-			configContents, err := os.ReadFile(path)
+		if _, err := os.Stat(file); err == nil {
+			configContents, err := os.ReadFile(file)
 			if err != nil {
 				log.Fatalf("Failed to read config file: %s", err.Error())
 			}
