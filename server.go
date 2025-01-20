@@ -216,7 +216,7 @@ func runServer(gameDir string, cfg *Config) {
 
 	http.HandleFunc("/", h.ServeHTTP)
 
-	addr := fmt.Sprintf("%s:%d", cfg.FastDLHost, cfg.FastDLPort)
+	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 
 	log.Printf("Starting server on %s...\n", addr)
 

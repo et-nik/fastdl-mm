@@ -44,16 +44,16 @@ func MetaQuery() int {
 
 	cfg := loadConfig(gameDir)
 
-	if cfg.FastDLHost == "" {
+	if cfg.Host == "" {
 		ip := engineFuncs.CVarGetString("ip")
-		cfg.FastDLHost = ip
+		cfg.Host = ip
 	}
 
-	if cfg.FastDLHost == "" || cfg.FastDLHost == "0.0.0.0" {
-		panic("FastDLHost is not set")
+	if cfg.Host == "" || cfg.Host == "0.0.0.0" {
+		panic("host is not set")
 	}
 
-	if cfg.FastDLPort == 0 {
+	if cfg.Port == 0 {
 		setRandomPort(cfg)
 	}
 
@@ -62,7 +62,7 @@ func MetaQuery() int {
 	engineFuncs.ServerCommand(
 		fmt.Sprintf(
 			"sv_downloadurl \"%s\"",
-			fmt.Sprintf("http://%s:%d", cfg.FastDLHost, cfg.FastDLPort),
+			fmt.Sprintf("http://%s:%d", cfg.Host, cfg.Port),
 		),
 	)
 	engineFuncs.ServerExecute()
@@ -117,7 +117,7 @@ func setRandomPort(cfg *Config) {
 		log.Fatalf("Failed to get random port: %s", err.Error())
 	}
 
-	cfg.FastDLPort = uint16(listener.Addr().(*net.TCPAddr).Port)
+	cfg.Port = uint16(listener.Addr().(*net.TCPAddr).Port)
 
 	err = listener.Close()
 	if err != nil {

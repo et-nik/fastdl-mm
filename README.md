@@ -29,8 +29,8 @@ You can configure the plugin using the `fastdl.yaml` file. The file can be locat
 ```yaml
 # fastdl.yaml
 
-fastDLHost: "127.0.0.1"      # Leave it empty if you want to use the same IP as the game server
-fastDLPort: 13080             # Leave it empty if you want to use random port
+#host: "127.0.0.1"         # Leave it empty if you want to use the same IP as the game server
+port: 13080                # Leave it empty if you want to use random port
 autoIndexEnabled: true
 forbiddenRegexp:
   - mapcycle.*
@@ -63,11 +63,11 @@ allowedPaths:
 
 ### Configuration options
 
-#### fastDLHost
+#### host
 
 The host of the FastDL server. This is the IP address. Leave it empty if you want to use the same IP as the game server.
 
-#### fastDLPort
+#### port
 
 The port of the FastDL server. Leave it empty if you want to use random port.
 

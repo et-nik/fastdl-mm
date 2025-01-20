@@ -5,8 +5,8 @@ import (
 )
 
 type Config struct {
-	FastDLHost          string   `yaml:"fastDLHost"`
-	FastDLPort          uint16   `yaml:"fastDLPort"`
+	Host                string   `yaml:"host"`
+	Port                uint16   `yaml:"port"`
 	AutoIndexEnabled    bool     `yaml:"autoIndexEnabled"`
 	ForbiddenRegexp     []string `yaml:"forbiddenRegexp"`
 	ForbiddenExtentions []string `yaml:"forbiddenExtentions"`
@@ -27,8 +27,8 @@ func ParseConfig(in []byte) (*Config, error) {
 }
 
 var DefaultConfig = &Config{
-	FastDLHost:       "",
-	FastDLPort:       0,
+	Host:             "",
+	Port:             0,
 	AutoIndexEnabled: false,
 	ForbiddenRegexp: []string{
 		"mapcycle.*",
