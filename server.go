@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -212,6 +213,8 @@ func (h *fileHandler) pathAllowed(filePath string) bool {
 }
 
 func runServer(gameDir string, cfg *Config) {
+	runtime.LockOSThread()
+
 	h := newFileHandler(gameDir, cfg)
 
 	http.HandleFunc("/", h.ServeHTTP)
