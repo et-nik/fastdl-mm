@@ -1,19 +1,18 @@
 package main
 
 import (
-	"fmt"
 	"github.com/et-nik/fastdl-mm/template"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 )
 
 type fileHandler struct {
 	baseDir string
+	plugin  *Plugin
 	config  *Config
 
 	fileCache *MRUCache
@@ -25,32 +24,35 @@ type fileHandler struct {
 	forbiddenRegexps    []*regexp.Regexp
 }
 
-func newFileHandler(baseDir string, cfg *Config) *fileHandler {
-	allowedExtensions := make(map[string]struct{}, len(cfg.AllowedExtentions))
-	for _, ext := range cfg.AllowedExtentions {
+func newFileHandler(baseDir string, plugin *Plugin) *fileHandler {
+	allowedExtensions := make(map[string]struct{}, len(plugin.cfg.AllowedExtentions))
+	for _, ext := range plugin.cfg.AllowedExtentions {
 		allowedExtensions[ext] = struct{}{}
 	}
 
-	forbiddenExtensions := make(map[string]struct{}, len(cfg.ForbiddenExtentions))
-	for _, ext := range cfg.ForbiddenExtentions {
+	forbiddenExtensions := make(map[string]struct{}, len(plugin.cfg.ForbiddenExtentions))
+	for _, ext := range plugin.cfg.ForbiddenExtentions {
 		forbiddenExtensions[ext] = struct{}{}
 	}
 
-	allowedPaths := make(map[string]struct{}, len(cfg.AllowedPaths))
-	for _, path := range cfg.AllowedPaths {
+	allowedPaths := make(map[string]struct{}, len(plugin.cfg.AllowedPaths))
+	for _, path := range plugin.cfg.AllowedPaths {
 		allowedPaths[path] = struct{}{}
 	}
 
-	forbiddenPaths := make(map[string]struct{}, len(cfg.ForbiddenPaths))
-	for _, path := range cfg.ForbiddenPaths {
+	forbiddenPaths := make(map[string]struct{}, len(plugin.cfg.ForbiddenPaths))
+	for _, path := range plugin.cfg.ForbiddenPaths {
 		forbiddenPaths[path] = struct{}{}
 	}
 
-	forbiddenRegexps := make([]*regexp.Regexp, 0, len(cfg.ForbiddenRegexp))
-	for _, regxp := range cfg.ForbiddenRegexp {
+	forbiddenRegexps := make([]*regexp.Regexp, 0, len(plugin.cfg.ForbiddenRegexp))
+	for _, regxp := range plugin.cfg.ForbiddenRegexp {
 		r, err := regexp.Compile(regxp)
 		if err != nil {
-			log.Fatalf("Failed to compile regexp %q: %v", regxp, err)
+			slog.Error("Failed to compile firbidden regexp",
+				"regexp", regxp,
+				"error", err,
+			)
 		}
 
 		forbiddenRegexps = append(forbiddenRegexps, r)
@@ -58,9 +60,10 @@ func newFileHandler(baseDir string, cfg *Config) *fileHandler {
 
 	return &fileHandler{
 		baseDir: baseDir,
-		config:  cfg,
+		plugin:  plugin,
+		config:  plugin.cfg,
 
-		fileCache: NewMRUCache(cfg.CacheSize.Int64()),
+		fileCache: NewMRUCache(plugin.cfg.CacheSize.Int64()),
 
 		allowedExtensions:   allowedExtensions,
 		forbiddenExtensions: forbiddenExtensions,
@@ -101,7 +104,7 @@ func (h *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.fileAllowed(fullPath) {
+	if !h.fileAllowed(requestedPath) {
 		http.NotFound(w, r)
 
 		return
@@ -189,6 +192,12 @@ func (h *fileHandler) fileAllowed(filePath string) bool {
 		return false
 	}
 
+	if h.config.ServePrecached {
+		if _, ok := (*h.plugin.precachedFiles)[filePath]; !ok {
+			return false
+		}
+	}
+
 	ext := strings.ToLower(filepath.Ext(filePath))
 	ext = strings.TrimPrefix(ext, ".")
 
@@ -225,6 +234,12 @@ func (h *fileHandler) pathAllowed(filePath string) bool {
 		return false
 	}
 
+	if h.config.ServePrecached {
+		if _, ok := (*h.plugin.precachedFiles)[filePath]; !ok {
+			return false
+		}
+	}
+
 	for _, r := range h.forbiddenRegexps {
 		if r.MatchString(filePath) {
 			return false
@@ -245,20 +260,4 @@ func (h *fileHandler) pathAllowed(filePath string) bool {
 
 	// If no paths are allowed, then all paths are allowed
 	return len(h.allowedPaths) == 0
-}
-
-func runServer(gameDir string, cfg *Config) {
-	runtime.LockOSThread()
-
-	h := newFileHandler(gameDir, cfg)
-
-	http.HandleFunc("/", h.ServeHTTP)
-
-	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
-
-	log.Printf("Starting server on %s...\n", addr)
-
-	if err := http.ListenAndServe(addr, nil); err != nil {
-		log.Fatalf("Error starting server: %v", err)
-	}
 }

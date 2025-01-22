@@ -3,10 +3,13 @@ package main
 import (
 	"fmt"
 	metamod "github.com/et-nik/metamod-go"
-	"log"
+	"github.com/pkg/errors"
+	"log/slog"
+	"math/rand"
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -26,51 +29,198 @@ func init() {
 		panic(err)
 	}
 
+	plugin := NewPlugin()
+
 	err = metamod.SetMetaCallbacks(&metamod.MetaCallbacks{
-		MetaQuery: MetaQuery,
+		MetaQuery:  metaQueryFn(plugin),
+		MetaDetach: metaDetachFn(plugin),
 	})
 	if err != nil {
 		panic(err)
 	}
-}
 
-func MetaQuery() int {
-	engineFuncs, err := metamod.GetEngineFuncs()
+	err = metamod.SetApiCallbacks(&metamod.APICallbacks{
+		GameDLLInit: func() metamod.APICallbackResult {
+			err := plugin.Init()
+			if err != nil {
+				slog.Error("Failed to init plugin: ", "error", err)
+
+				return metamod.APICallbackResultHandled
+			}
+
+			slog.Debug("Plugin initialized")
+
+			return metamod.APICallbackResultHandled
+		},
+		ServerDeactivate: func() metamod.APICallbackResult {
+			err := plugin.Reset()
+			if err != nil {
+				slog.Error("Failed to reset plugin: ", "error", err)
+
+				return metamod.APICallbackResultHandled
+			}
+
+			slog.Debug("Server deactivated")
+
+			return metamod.APICallbackResultHandled
+		},
+		ServerActivate: func(_ *metamod.Edict, _ int, _ int) metamod.APICallbackResult {
+			slog.Debug("Server activated")
+
+			if plugin.cfg.ServePrecached {
+				processMapRelatedResource(plugin)
+			}
+
+			return metamod.APICallbackResultHandled
+		},
+	})
+
 	if err != nil {
-		log.Fatalf("Failed to get engine funcs: %s", err.Error())
+		panic(err)
 	}
 
-	gameDir := engineFuncs.GetGameDir()
+	err = metamod.SetEngineHooks(&metamod.EngineHooks{
+		PrecacheGeneric: func(filePath string) (metamod.EngineHookResult, int) {
+			slog.Debug("Precaching generic", "filePath", filePath)
 
-	cfg := loadConfig(gameDir)
+			plugin.AppendPrecached(filePath)
 
-	if cfg.Host == "" {
-		ip := engineFuncs.CVarGetString("ip")
-		cfg.Host = ip
-	}
+			return metamod.EngineHookResultHandled, 0
+		},
+		PrecacheModel: func(modelPath string) (metamod.EngineHookResult, int) {
+			slog.Debug("Precaching model", "filePath", modelPath)
 
-	if cfg.Host == "" || cfg.Host == "0.0.0.0" {
-		panic("host is not set")
-	}
+			plugin.AppendPrecached(modelPath)
 
-	if cfg.Port == 0 {
-		setRandomPort(cfg)
-	}
+			return metamod.EngineHookResultHandled, 0
+		},
+		PrecacheSound: func(soundPath string) (metamod.EngineHookResult, int) {
+			fullPath := filepath.Join("sound", soundPath)
 
-	go runServer(gameDir, cfg)
+			slog.Debug("Precaching sound", "filePath", fullPath)
 
-	engineFuncs.ServerCommand(
-		fmt.Sprintf(
-			"sv_downloadurl \"%s\"",
-			fmt.Sprintf("http://%s:%d", cfg.Host, cfg.Port),
-		),
-	)
-	engineFuncs.ServerExecute()
+			plugin.AppendPrecached(fullPath)
 
-	return 1
+			return metamod.EngineHookResultHandled, 0
+		},
+	})
 }
 
-func loadConfig(gameDir string) *Config {
+func metaQueryFn(p *Plugin) func() int {
+	return func() int {
+		engineFuncs, err := metamod.GetEngineFuncs()
+		if err != nil {
+			slog.Error("Failed to get engine funcs: ", "error", err)
+
+			return 0
+		}
+
+		metaUtilFn, err := metamod.GetMetaUtilFuncs()
+		if err != nil {
+			slog.Error("Failed to get meta util funcs: ", "error", err)
+
+			return 0
+		}
+
+		logLevel := slog.LevelInfo
+
+		developerCvarValue := engineFuncs.CVarGetFloat("developer")
+		if developerCvarValue > 0 {
+			logLevel = slog.LevelDebug
+		}
+
+		slog.SetDefault(
+			slog.New(
+				slog.NewTextHandler(
+					NewMetaLogWriter(metaUtilFn),
+					&slog.HandlerOptions{
+						Level: logLevel,
+						ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+							if a.Key == slog.TimeKey {
+								return slog.Attr{}
+							}
+
+							return a
+						},
+					},
+				),
+			),
+		)
+
+		gameDir := engineFuncs.GetGameDir()
+
+		cfg, err := loadConfig(gameDir)
+		if err != nil {
+			slog.Error(
+				"Failed to load config",
+				"error", err,
+			)
+
+			return 0
+		}
+
+		if cfg.Host == "" {
+			ip := engineFuncs.CVarGetString("ip")
+			cfg.Host = ip
+		}
+
+		if cfg.Host == "" || cfg.Host == "0.0.0.0" {
+			panic("host is not set")
+		}
+
+		if cfg.Port == 0 {
+			err = setRandomPort(cfg)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		p.SetConfig(cfg)
+		p.SetGameDir(gameDir)
+
+		go func() {
+			runtime.LockOSThread()
+
+			err := p.RunServer(gameDir)
+			if err != nil {
+				panic(err)
+			}
+		}()
+
+		svDownloadUrl := fmt.Sprintf("http://%s:%d", cfg.Host, cfg.Port)
+
+		slog.Debug(
+			"Change sv_downloadurl",
+			"sv_downloadurl", svDownloadUrl,
+		)
+
+		engineFuncs.ServerCommand(
+			fmt.Sprintf(
+				"sv_downloadurl \"%s\"",
+				svDownloadUrl,
+			),
+		)
+		engineFuncs.ServerExecute()
+
+		return 1
+	}
+}
+
+func metaDetachFn(p *Plugin) func(now int, reason int) int {
+	return func(now int, reason int) int {
+		err := p.Shutdown()
+		if err != nil {
+			slog.Error(
+				"Failed to shutdown plugin: ",
+				"error", err,
+			)
+		}
+
+		return 1
+	}
+}
+
+func loadConfig(gameDir string) (*Config, error) {
 	fileNames := []string{
 		"fastdl.yml",
 		"fastdl.yaml",
@@ -92,36 +242,99 @@ func loadConfig(gameDir string) *Config {
 		if _, err := os.Stat(file); err == nil {
 			configContents, err := os.ReadFile(file)
 			if err != nil {
-				log.Fatalf("Failed to read config file: %s", err.Error())
+				return nil, errors.WithMessage(err, "failed to read config file")
 			}
 
 			cfg, err := ParseConfig(configContents)
 			if err != nil {
-				log.Fatalf("Failed to parse config file: %s", err.Error())
+				return nil, errors.WithMessage(err, "failed to parse config file")
 			}
 
-			return cfg
+			return cfg, nil
 		}
 	}
 
-	return loadDefaultConfig()
+	return DefaultConfig, nil
 }
 
-func loadDefaultConfig() *Config {
-	return DefaultConfig
-}
+func setRandomPort(cfg *Config) error {
+	randomPort := 0
+	minPort, maxPort := cfg.PortRange.IntRange()
 
-func setRandomPort(cfg *Config) {
-	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		log.Fatalf("Failed to get random port: %s", err.Error())
+	var listener net.Listener
+	var err error
+
+	for {
+		if maxPort > 0 && minPort < maxPort {
+			randomPort = rand.Intn(maxPort-minPort+1) + minPort
+		}
+
+		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", randomPort))
+		if err != nil {
+			continue
+		}
+
+		break
 	}
 
 	cfg.Port = uint16(listener.Addr().(*net.TCPAddr).Port)
 
 	err = listener.Close()
 	if err != nil {
-		log.Fatalf("Failed to close listener: %s", err.Error())
+		return errors.WithMessage(err, "failed to close listener")
+	}
+
+	return nil
+}
+
+func processMapRelatedResource(p *Plugin) {
+	engineFuncs, err := metamod.GetEngineFuncs()
+	if err != nil {
+		slog.Error(
+			"Failed to get engine funcs: ",
+			"error", err,
+		)
+
+		return
+	}
+
+	wordspawn := engineFuncs.EntityOfEntIndex(0)
+	if wordspawn == nil {
+		slog.Error("Failed to get worldspawn entity")
+
+		return
+	}
+
+	// Append map specified resources
+	mapPath := wordspawn.EntVars().Model()
+	p.AppendPrecached(mapPath)
+
+	mapName := strings.TrimSuffix(filepath.Base(mapPath), filepath.Ext(mapPath))
+
+	p.AppendPrecached(filepath.Join("overviews", fmt.Sprintf("%s.txt", mapName)))
+	p.AppendPrecached(filepath.Join("overviews", fmt.Sprintf("%s.bmp", mapName)))
+	p.AppendPrecached(filepath.Join("overviews", fmt.Sprintf("%s.tga", mapName)))
+
+	p.AppendPrecached(filepath.Join("maps", fmt.Sprintf("%s.txt", mapName)))
+	p.AppendPrecached(filepath.Join("maps", fmt.Sprintf("%s_detail.txt", mapName)))
+
+	// Append sky
+	skyName := engineFuncs.CVarGetString("sv_skyname")
+
+	if skyName != "" {
+		p.AppendPrecached(filepath.Join("gfx", "env", fmt.Sprintf("%sbk.tga", skyName)))
+		p.AppendPrecached(filepath.Join("gfx", "env", fmt.Sprintf("%sdn.tga", skyName)))
+		p.AppendPrecached(filepath.Join("gfx", "env", fmt.Sprintf("%sft.tga", skyName)))
+		p.AppendPrecached(filepath.Join("gfx", "env", fmt.Sprintf("%slf.tga", skyName)))
+		p.AppendPrecached(filepath.Join("gfx", "env", fmt.Sprintf("%srt.tga", skyName)))
+		p.AppendPrecached(filepath.Join("gfx", "env", fmt.Sprintf("%sup.tga", skyName)))
+
+		p.AppendPrecached(filepath.Join("gfx", "env", fmt.Sprintf("%sbk.bmp", skyName)))
+		p.AppendPrecached(filepath.Join("gfx", "env", fmt.Sprintf("%sdn.bmp", skyName)))
+		p.AppendPrecached(filepath.Join("gfx", "env", fmt.Sprintf("%sft.bmp", skyName)))
+		p.AppendPrecached(filepath.Join("gfx", "env", fmt.Sprintf("%slf.bmp", skyName)))
+		p.AppendPrecached(filepath.Join("gfx", "env", fmt.Sprintf("%srt.bmp", skyName)))
+		p.AppendPrecached(filepath.Join("gfx", "env", fmt.Sprintf("%sup.bmp", skyName)))
 	}
 }
 

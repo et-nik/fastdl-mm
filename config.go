@@ -9,7 +9,9 @@ import (
 type Config struct {
 	Host                string          `yaml:"host"`
 	Port                uint16          `yaml:"port"`
+	PortRange           ConfigPortRange `yaml:"portRange"`
 	AutoIndexEnabled    bool            `yaml:"autoIndexEnabled"`
+	ServePrecached      bool            `yaml:"servePrecached"`
 	ForbiddenRegexp     []string        `yaml:"forbiddenRegexp"`
 	ForbiddenExtentions []string        `yaml:"forbiddenExtentions"`
 	AllowedExtentions   []string        `yaml:"allowedExtentions"`
@@ -57,6 +59,27 @@ func (c ConfigCacheSize) Int64() int64 {
 	return number * multiplier
 }
 
+type ConfigPortRange string
+
+func (c ConfigPortRange) IntRange() (int, int) {
+	splitted := strings.SplitN(string(c), "-", 2)
+	if len(splitted) != 2 {
+		return 0, 0
+	}
+
+	low, err := strconv.Atoi(splitted[0])
+	if err != nil {
+		return 0, 0
+	}
+
+	high, err := strconv.Atoi(splitted[1])
+	if err != nil {
+		return 0, 0
+	}
+
+	return low, high
+}
+
 func ParseConfig(in []byte) (*Config, error) {
 	var cfg Config
 
@@ -77,28 +100,30 @@ var DefaultConfig = &Config{
 		".*textscheme.*",
 	},
 	AllowedExtentions: []string{
+		"bmp",
+		"bsp",
+		"gif",
+		"jpeg",
+		"jpg",
 		"lmp",
 		"lst",
-		"wad",
-		"bmp",
-		"tga",
-		"jpg",
-		"jpeg",
-		"png",
-		"gif",
-		"txt",
-		"zip",
-		"bsp",
-		"res",
-		"wav",
+		"mdl",
 		"mp3",
+		"png",
+		"res",
 		"spr",
+		"tga",
+		"txt",
+		"wad",
+		"wav",
+		"zip",
 	},
 	AllowedPaths: []string{
 		"gfx",
 		"maps",
 		"media",
 		"models",
+		"overviews",
 		"sound",
 		"sprites",
 	},

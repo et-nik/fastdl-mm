@@ -7,6 +7,12 @@ This plugin is safe and does not allow downloading files from forbidden director
 
 Plugin written with [Metamod-Go](https://github.com/et-nik/metamod-go) library.
 
+## Features
+
+- File caching to reduce the load on the web server.
+- Serve only precached files. If enabled, the plugin will not download files that are not in the precache list.
+- Secure file downloading. The plugin does not allow downloading files from forbidden directories or files with forbidden extensions.
+
 ## Installation
 
 1. Download the latest release from the [releases page](https://github.com/et-nik/fastdl-mm/releases)
@@ -37,6 +43,14 @@ You can configure the plugin using the `fastdl.yaml` file. The file can be locat
 # The port of the FastDL HTTP server. Leave it empty if you want to use random port.
 # port: 13080
 
+# The range of random ports for the FastDL HTTP server.
+# If the port is not specified, the plugin will use a random port from this range.
+# If the port is specified, the plugin will use the specified port, ignoring this range.
+#portRange: 40000-50000
+
+# Serve only precached files. If enabled, the plugin will not download files that are not in the precache list.
+servePrecached: false
+
 # Generate auto index page for directories. It allows to see the list of files in the directory.
 autoIndexEnabled: true
 
@@ -51,22 +65,23 @@ forbiddenRegexp:
 # Allowed file extensions. 
 # Files with extensions not in this list can not be downloaded.
 allowedExtentions:
+  - bmp
+  - bsp
+  - gif
+  - jpeg
+  - jpg
   - lmp
   - lst
-  - wad
-  - bmp
-  - tga
-  - jpg
-  - jpeg
-  - png
-  - gif
-  - txt
-  - zip
-  - bsp
-  - res
-  - wav
+  - mdl
   - mp3
+  - png
+  - res
   - spr
+  - tga
+  - txt
+  - wad
+  - wav
+  - zip
 
 # Allowed paths. 
 # Files from directories not in this list can not be downloaded.
@@ -75,6 +90,7 @@ allowedPaths:
   - maps
   - media
   - models
+  - overviews
   - sound
   - sprites
 ```
@@ -88,6 +104,14 @@ The host of the FastDL server. This is the IP address. Leave it empty if you wan
 #### port
 
 The port of the FastDL server. Leave it empty if you want to use random port.
+
+#### portRange
+
+The range of random ports for the FastDL server. If the port is not specified, the plugin will use a random port from this range. If the port is specified, the plugin will use the specified port, ignoring this range.
+
+#### servePrecached
+
+Serve only precached files. If enabled, the plugin will not download files that are not in the precache list.
 
 #### autoIndexEnabled
 
