@@ -37,10 +37,12 @@ You can configure the plugin using the `fastdl.yaml` file. The file can be locat
 ```yaml
 # fastdl.yaml
 
-# The host of the FastDL HTTP server. Leave it empty if you want to use the same IP as the game server.
+# The host of the FastDL HTTP server. 
+# Leave it empty if you want to use the same IP as the game server.
 # host: "127.0.0.1"
 
-# The port of the FastDL HTTP server. Leave it empty if you want to use random port.
+# The port of the FastDL HTTP server. 
+# Leave it empty if you want to use random port.
 # port: 13080
 
 # The range of random ports for the FastDL HTTP server.
@@ -48,13 +50,16 @@ You can configure the plugin using the `fastdl.yaml` file. The file can be locat
 # If the port is specified, the plugin will use the specified port, ignoring this range.
 #portRange: 40000-50000
 
-# Serve only precached files. If enabled, the plugin will not allow downloading files that are not in the precache list.
+# Serve only precached files. 
+# If enabled, the plugin will not allow downloading files that are not in the precache list.
 servePrecached: false
 
-# Generate auto index page for directories. It allows to see the list of files in the directory.
+# Generate auto index page for directories. 
+# It allows to see the list of files in the directory.
 autoIndexEnabled: true
 
-# Cache size for downloaded files. The plugin will delete the oldest files if the cache is full.
+# Cache size for downloaded files. 
+# The plugin will delete the oldest files if the cache is full.
 cacheSize: 50MB
 
 # Forbidden files and directories by regular expressions.
