@@ -10,7 +10,7 @@ Plugin written with [Metamod-Go](https://github.com/et-nik/metamod-go) library.
 ## Features
 
 - File caching to reduce the load on the web server.
-- Serve only precached files. If enabled, the plugin will not download files that are not in the precache list.
+- Serve only precached files. If enabled, you can't download files that are not in the precache list.
 - Secure file downloading. The plugin does not allow downloading files from forbidden directories or files with forbidden extensions.
 
 ## Installation
@@ -48,7 +48,7 @@ You can configure the plugin using the `fastdl.yaml` file. The file can be locat
 # If the port is specified, the plugin will use the specified port, ignoring this range.
 #portRange: 40000-50000
 
-# Serve only precached files. If enabled, the plugin will not download files that are not in the precache list.
+# Serve only precached files. If enabled, the plugin will not allow downloading files that are not in the precache list.
 servePrecached: false
 
 # Generate auto index page for directories. It allows to see the list of files in the directory.
@@ -111,7 +111,7 @@ The range of random ports for the FastDL server. If the port is not specified, t
 
 #### servePrecached
 
-Serve only precached files. If enabled, the plugin will not download files that are not in the precache list.
+Serve only precached files. If enabled, the plugin will not allow downloading files that are not in the precache list.
 
 #### autoIndexEnabled
 
