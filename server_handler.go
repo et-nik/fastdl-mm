@@ -192,14 +192,18 @@ func (h *fileHandler) fileAllowed(filePath string) bool {
 		return false
 	}
 
-	if h.config.ServePrecached {
+	ext := strings.ToLower(filepath.Ext(filePath))
+	ext = strings.TrimPrefix(ext, ".")
+
+	if h.config.ServePrecached && ext != "wad" {
+		if h.plugin.precachedFiles == nil {
+			return false
+		}
+
 		if _, ok := (*h.plugin.precachedFiles)[filePath]; !ok {
 			return false
 		}
 	}
-
-	ext := strings.ToLower(filepath.Ext(filePath))
-	ext = strings.TrimPrefix(ext, ".")
 
 	if ext == "cfg" || ext == "ini" {
 		return false
@@ -235,6 +239,10 @@ func (h *fileHandler) pathAllowed(filePath string) bool {
 	}
 
 	if h.config.ServePrecached {
+		if h.plugin.precachedFiles == nil {
+			return false
+		}
+
 		if _, ok := (*h.plugin.precachedFiles)[filePath]; !ok {
 			return false
 		}
