@@ -80,6 +80,14 @@ func (h *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	requestedPath := filepath.Clean(r.URL.Path)
 	fullPath := filepath.Join(h.baseDir, requestedPath)
 
+	if h.fileCache.Exists(requestedPath) {
+		// Serve cached file.
+
+		http.ServeFileFS(w, r, h.fileCache, requestedPath)
+
+		return
+	}
+
 	info, err := os.Stat(fullPath)
 	if err != nil {
 		http.NotFound(w, r)
@@ -99,21 +107,21 @@ func (h *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.fileCache.Exists(fullPath) {
-		contents, err := os.ReadFile(fullPath)
+	if !h.fileCache.Exists(requestedPath) {
+		contents, err := os.ReadFile(requestedPath)
 		if err != nil {
 			http.Error(w, "Failed to read file", http.StatusInternalServerError)
 
 			return
 		}
 
-		h.fileCache.Put(fullPath, &CacheFile{
+		h.fileCache.Put(requestedPath, &CacheFile{
 			Contents: contents,
 			FileInfo: info,
 		})
 	}
 
-	http.ServeFileFS(w, r, h.fileCache, requestedPath)
+	http.ServeFile(w, r, requestedPath)
 }
 
 func (h *fileHandler) serveDirInfo(w http.ResponseWriter, r *http.Request, requestedPath, fullPath string) {
