@@ -16,6 +16,8 @@ type fileHandler struct {
 	baseDir string
 	config  *Config
 
+	fileCache *MRUCache
+
 	allowedExtensions   map[string]struct{}
 	forbiddenExtensions map[string]struct{}
 	allowedPaths        map[string]struct{}
@@ -58,6 +60,8 @@ func newFileHandler(baseDir string, cfg *Config) *fileHandler {
 		baseDir: baseDir,
 		config:  cfg,
 
+		fileCache: NewMRUCache(cfg.CacheSize.Int64()),
+
 		allowedExtensions:   allowedExtensions,
 		forbiddenExtensions: forbiddenExtensions,
 		allowedPaths:        allowedPaths,
@@ -69,6 +73,8 @@ func newFileHandler(baseDir string, cfg *Config) *fileHandler {
 func (h *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.baseDir == "" {
 		http.Error(w, "Base directory is not set", http.StatusInternalServerError)
+
+		return
 	}
 
 	requestedPath := filepath.Clean(r.URL.Path)
@@ -82,57 +88,7 @@ func (h *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if info.IsDir() {
-		if !h.config.AutoIndexEnabled {
-			http.NotFound(w, r)
-
-			return
-		}
-
-		if !h.pathAllowed(requestedPath) {
-			http.NotFound(w, r)
-
-			return
-		}
-
-		if !strings.HasSuffix(r.URL.Path, "/") {
-			http.Redirect(w, r, r.URL.Path+"/", http.StatusMovedPermanently)
-
-			return
-		}
-
-		entries, err := os.ReadDir(fullPath)
-		if err != nil {
-			http.Error(w, "Failed to read directory", http.StatusInternalServerError)
-			return
-		}
-
-		items := make([]string, 0, len(entries)+1)
-
-		if requestedPath != "/" {
-			items = append(items, "../")
-		}
-
-		for _, entry := range entries {
-			entryPath := filepath.Join(requestedPath, entry.Name())
-
-			if entry.IsDir() && h.pathAllowed(entryPath) {
-				items = append(items, entry.Name()+"/")
-			} else if h.fileAllowed(entryPath) {
-				items = append(items, entry.Name())
-			}
-		}
-
-		w.Header().Set("Content-Type", "text/html")
-		err = template.AutoIndexTemplate.Execute(w, struct {
-			Path  string
-			Items []string
-		}{
-			Path:  requestedPath,
-			Items: items,
-		})
-		if err != nil {
-			http.Error(w, "Failed to render template", http.StatusInternalServerError)
-		}
+		h.serveDirInfo(w, r, requestedPath, fullPath)
 
 		return
 	}
@@ -143,7 +99,78 @@ func (h *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.ServeFile(w, r, fullPath)
+	if !h.fileCache.Exists(fullPath) {
+		contents, err := os.ReadFile(fullPath)
+		if err != nil {
+			http.Error(w, "Failed to read file", http.StatusInternalServerError)
+
+			return
+		}
+
+		h.fileCache.Put(fullPath, &CacheFile{
+			Contents: contents,
+			FileInfo: info,
+		})
+	}
+
+	http.ServeFileFS(w, r, h.fileCache, requestedPath)
+}
+
+func (h *fileHandler) serveDirInfo(w http.ResponseWriter, r *http.Request, requestedPath, fullPath string) {
+	if !h.config.AutoIndexEnabled {
+		http.NotFound(w, r)
+
+		return
+	}
+
+	if !h.pathAllowed(requestedPath) {
+		http.NotFound(w, r)
+
+		return
+	}
+
+	if !strings.HasSuffix(r.URL.Path, "/") {
+		http.Redirect(w, r, r.URL.Path+"/", http.StatusMovedPermanently)
+
+		return
+	}
+
+	entries, err := os.ReadDir(fullPath)
+	if err != nil {
+		http.Error(w, "Failed to read directory", http.StatusInternalServerError)
+
+		return
+	}
+
+	items := make([]string, 0, len(entries)+1)
+
+	if requestedPath != "/" {
+		items = append(items, "../")
+	}
+
+	for _, entry := range entries {
+		entryPath := filepath.Join(requestedPath, entry.Name())
+
+		if entry.IsDir() && h.pathAllowed(entryPath) {
+			items = append(items, entry.Name()+"/")
+		} else if h.fileAllowed(entryPath) {
+			items = append(items, entry.Name())
+		}
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	err = template.AutoIndexTemplate.Execute(w, struct {
+		Path  string
+		Items []string
+	}{
+		Path:  requestedPath,
+		Items: items,
+	})
+	if err != nil {
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+	}
+
+	return
 }
 
 func (h *fileHandler) fileAllowed(filePath string) bool {
@@ -157,7 +184,7 @@ func (h *fileHandler) fileAllowed(filePath string) bool {
 	ext := strings.ToLower(filepath.Ext(filePath))
 	ext = strings.TrimPrefix(ext, ".")
 
-	if ext == "cfg" {
+	if ext == "cfg" || ext == "ini" {
 		return false
 	}
 
