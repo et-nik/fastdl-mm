@@ -18,6 +18,7 @@ type Config struct {
 	ForbiddenPaths      []string        `yaml:"forbiddenPaths"`
 	AllowedPaths        []string        `yaml:"allowedPaths"`
 	CacheSize           ConfigCacheSize `yaml:"cacheSize"`
+	CustomDownloadURL   string          `yaml:"customDownloadURL"`
 }
 
 type ConfigCacheSize string

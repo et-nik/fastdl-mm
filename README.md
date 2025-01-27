@@ -142,3 +142,8 @@ A list of allowed paths. Files from directories not in this list will not be dow
 #### forbiddenPaths
 
 A list of forbidden paths. Files from directories in this list will not be downloaded.
+
+#### customDownloadURL
+
+A custom download URL. If specified, the plugin will use this URL to download files.
+Example: `http://example.com:14080/`

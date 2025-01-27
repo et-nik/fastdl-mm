@@ -164,8 +164,8 @@ func metaQueryFn(p *Plugin) func() int {
 			cfg.Host = ip
 		}
 
-		if cfg.Host == "" || cfg.Host == "0.0.0.0" {
-			panic("host is not set")
+		if (cfg.Host == "" || cfg.Host == "0.0.0.0") && cfg.CustomDownloadURL == "" {
+			panic("host is not set, please set host or customDownloadURL in config")
 		}
 
 		if cfg.Port == 0 {
@@ -187,7 +187,13 @@ func metaQueryFn(p *Plugin) func() int {
 			}
 		}()
 
-		svDownloadUrl := fmt.Sprintf("http://%s:%d", cfg.Host, cfg.Port)
+		var svDownloadUrl string
+
+		if cfg.CustomDownloadURL != "" {
+			svDownloadUrl = cfg.CustomDownloadURL
+		} else {
+			svDownloadUrl = fmt.Sprintf("http://%s:%d", cfg.Host, cfg.Port)
+		}
 
 		slog.Debug(
 			"Change sv_downloadurl",
