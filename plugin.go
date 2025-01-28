@@ -95,7 +95,7 @@ func (p *Plugin) RunServer(gameDir string) error {
 		Addr: addr,
 	}
 
-	slog.Info(fmt.Sprintf("FastDL HTTP Starting server on %s...\n", addr))
+	slog.Info(fmt.Sprintf("FastDL HTTP Starting server on %s...", addr))
 
 	err := p.server.ListenAndServe()
 	if err != nil {

@@ -195,8 +195,8 @@ func metaQueryFn(p *Plugin) func() int {
 			svDownloadUrl = fmt.Sprintf("http://%s:%d", cfg.Host, cfg.Port)
 		}
 
-		slog.Debug(
-			"Change sv_downloadurl",
+		slog.Info(
+			"Changing sv_downloadurl",
 			"sv_downloadurl", svDownloadUrl,
 		)
 
