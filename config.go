@@ -1,9 +1,11 @@
 package main
 
 import (
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -13,12 +15,29 @@ type Config struct {
 	AutoIndexEnabled    bool            `yaml:"autoIndexEnabled"`
 	ServePrecached      bool            `yaml:"servePrecached"`
 	ForbiddenRegexp     []string        `yaml:"forbiddenRegexp"`
-	ForbiddenExtentions []string        `yaml:"forbiddenExtentions"`
-	AllowedExtentions   []string        `yaml:"allowedExtentions"`
+	ForbiddenExtensions []string        `yaml:"forbiddenExtensions"`
+	AllowedExtensions   []string        `yaml:"allowedExtensions"`
 	ForbiddenPaths      []string        `yaml:"forbiddenPaths"`
 	AllowedPaths        []string        `yaml:"allowedPaths"`
 	CacheSize           ConfigCacheSize `yaml:"cacheSize"`
 	CustomDownloadURL   string          `yaml:"customDownloadURL"`
+	HTTP                ConfigHTTP      `yaml:"http"`
+}
+
+type ConfigHTTP struct {
+	ReadTimeout  ConfigTimeout `yaml:"readTimeout"`
+	WriteTimeout ConfigTimeout `yaml:"writeTimeout"`
+}
+
+type ConfigTimeout string
+
+func (c ConfigTimeout) Duration() time.Duration {
+	d, err := time.ParseDuration(string(c))
+	if err != nil {
+		return 0
+	}
+
+	return d
 }
 
 type ConfigCacheSize string
@@ -86,7 +105,7 @@ func ParseConfig(in []byte) (*Config, error) {
 
 	err := yaml.Unmarshal(in, &cfg)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed to unmarshal config")
 	}
 
 	return &cfg, nil
@@ -100,7 +119,7 @@ var DefaultConfig = &Config{
 		"mapcycle.*",
 		".*textscheme.*",
 	},
-	AllowedExtentions: []string{
+	AllowedExtensions: []string{
 		"bmp",
 		"bsp",
 		"gif",

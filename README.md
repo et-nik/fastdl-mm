@@ -69,7 +69,7 @@ forbiddenRegexp:
     
 # Allowed file extensions. 
 # Files with extensions not in this list can not be downloaded.
-allowedExtentions:
+allowedExtensions:
   - bmp
   - bsp
   - gif
@@ -127,11 +127,11 @@ If enabled, the plugin will generate an index file for each directory. The index
 The size of the cache for downloaded files. The plugin will delete the oldest files if the cache is full. The size can be specified in bytes, kilobytes, megabytes, or gigabytes.
 Example values: `50MB`, `1GB`.
 
-#### allowedExtentions
+#### allowedExtensions
 
 A list of allowed file extensions. Files with extensions not in this list will not be downloaded.
 
-#### forbiddenExtentions
+#### forbiddenExtensions
 
 A list of forbidden file extensions. Files with extensions in this list will not be downloaded.
 

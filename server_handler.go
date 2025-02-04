@@ -25,13 +25,13 @@ type fileHandler struct {
 }
 
 func newFileHandler(baseDir string, plugin *Plugin) *fileHandler {
-	allowedExtensions := make(map[string]struct{}, len(plugin.cfg.AllowedExtentions))
-	for _, ext := range plugin.cfg.AllowedExtentions {
+	allowedExtensions := make(map[string]struct{}, len(plugin.cfg.AllowedExtensions))
+	for _, ext := range plugin.cfg.AllowedExtensions {
 		allowedExtensions[ext] = struct{}{}
 	}
 
-	forbiddenExtensions := make(map[string]struct{}, len(plugin.cfg.ForbiddenExtentions))
-	for _, ext := range plugin.cfg.ForbiddenExtentions {
+	forbiddenExtensions := make(map[string]struct{}, len(plugin.cfg.ForbiddenExtensions))
+	for _, ext := range plugin.cfg.ForbiddenExtensions {
 		forbiddenExtensions[ext] = struct{}{}
 	}
 
