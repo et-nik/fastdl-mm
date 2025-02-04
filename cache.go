@@ -3,6 +3,7 @@ package main
 import (
 	"container/list"
 	"io/fs"
+	"sync"
 )
 
 const (
@@ -22,7 +23,7 @@ type cacheItem struct {
 type MRUCache struct {
 	capacity int64
 	size     int64
-	items    map[string]*list.Element
+	items    sync.Map // string -> *list.Element
 	order    *list.List
 }
 
@@ -34,7 +35,6 @@ func NewMRUCache(capacity int64) *MRUCache {
 	return &MRUCache{
 		capacity: capacity,
 		size:     0,
-		items:    make(map[string]*list.Element, 100),
 		order:    list.New(),
 	}
 }
@@ -44,8 +44,8 @@ func (cache *MRUCache) Put(key string, value *CacheFile) {
 		return
 	}
 
-	if element, exists := cache.items[key]; exists {
-		cache.order.MoveToFront(element)
+	if element, exists := cache.items.Load(key); exists {
+		cache.order.MoveToFront(element.(*list.Element))
 		cache.evictIfNeeded()
 
 		return
@@ -53,22 +53,23 @@ func (cache *MRUCache) Put(key string, value *CacheFile) {
 
 	item := &cacheItem{Key: key, Value: value}
 	element := cache.order.PushFront(item)
-	cache.items[key] = element
+	cache.items.Store(key, element)
 	cache.size += value.FileInfo.Size()
 
 	cache.evictIfNeeded()
 }
 
 func (cache *MRUCache) Exists(key string) bool {
-	_, exists := cache.items[key]
+	_, exists := cache.items.Load(key)
 
 	return exists
 }
 
 func (cache *MRUCache) Get(key string) (*CacheFile, bool) {
-	if element, exists := cache.items[key]; exists {
-		cache.order.MoveToFront(element)
-		return element.Value.(*cacheItem).Value, true
+	if element, exists := cache.items.Load(key); exists {
+		cache.order.MoveToFront(element.(*list.Element))
+
+		return element.(*list.Element).Value.(*cacheItem).Value, true
 	}
 
 	return nil, false
@@ -90,7 +91,7 @@ func (cache *MRUCache) evictIfNeeded() {
 		}
 		item := element.Value.(*cacheItem)
 		cache.size -= item.Value.FileInfo.Size()
-		delete(cache.items, item.Key)
+		cache.items.Delete(item.Key)
 		cache.order.Remove(element)
 	}
 }
