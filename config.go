@@ -9,24 +9,44 @@ import (
 )
 
 type Config struct {
-	Host                string          `yaml:"host"`
-	Port                uint16          `yaml:"port"`
-	PortRange           ConfigPortRange `yaml:"portRange"`
-	AutoIndexEnabled    bool            `yaml:"autoIndexEnabled"`
-	ServePrecached      bool            `yaml:"servePrecached"`
-	ForbiddenRegexp     []string        `yaml:"forbiddenRegexp"`
-	ForbiddenExtensions []string        `yaml:"forbiddenExtensions"`
-	AllowedExtensions   []string        `yaml:"allowedExtensions"`
-	ForbiddenPaths      []string        `yaml:"forbiddenPaths"`
-	AllowedPaths        []string        `yaml:"allowedPaths"`
-	CacheSize           ConfigCacheSize `yaml:"cacheSize"`
-	CustomDownloadURL   string          `yaml:"customDownloadURL"`
-	HTTP                ConfigHTTP      `yaml:"http"`
+	Host                string            `yaml:"host"`
+	Port                uint16            `yaml:"port"`
+	PortRange           ConfigPortRange   `yaml:"portRange"`
+	AutoIndexEnabled    bool              `yaml:"autoIndexEnabled"`
+	ServePrecached      bool              `yaml:"servePrecached"`
+	ForbiddenRegexp     []string          `yaml:"forbiddenRegexp"`
+	ForbiddenExtensions []string          `yaml:"forbiddenExtensions"`
+	AllowedExtensions   []string          `yaml:"allowedExtensions"`
+	ForbiddenPaths      []string          `yaml:"forbiddenPaths"`
+	AllowedPaths        []string          `yaml:"allowedPaths"`
+	CacheSize           ConfigCacheSize   `yaml:"cacheSize"`
+	CustomDownloadURL   string            `yaml:"customDownloadURL"`
+	HTTP                ConfigHTTP        `yaml:"http"`
+	RateLimits          []ConfigRateLimit `yaml:"rateLimits"`
+	BlockListIP         []string          `yaml:"blockListIP"`
 }
 
 type ConfigHTTP struct {
 	ReadTimeout  ConfigTimeout `yaml:"readTimeout"`
 	WriteTimeout ConfigTimeout `yaml:"writeTimeout"`
+}
+
+type ConfigRateLimit struct {
+	period string `yaml:"period"`
+	limit  int    `yaml:"limit"`
+}
+
+func (c ConfigRateLimit) Period() time.Duration {
+	d, err := time.ParseDuration(c.period)
+	if err != nil {
+		return 0
+	}
+
+	return d
+}
+
+func (c ConfigRateLimit) Limit() int {
+	return c.limit
 }
 
 type ConfigTimeout string

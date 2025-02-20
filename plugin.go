@@ -85,7 +85,19 @@ func (p *Plugin) Shutdown() error {
 }
 
 func (p *Plugin) RunServer(gameDir string) error {
-	h := newFileHandler(gameDir, p)
+	var h http.Handler
+
+	h = newFileHandler(gameDir, p)
+
+	for _, rateLimit := range p.cfg.RateLimits {
+		if rateLimit.Period() > 0 {
+			h = rateLimitMiddleware(h, rateLimit.Period(), rateLimit.Limit())
+		}
+	}
+
+	if len(p.cfg.BlockListIP) > 0 {
+		h = ipBlockMiddleware(h, p.cfg.BlockListIP)
+	}
 
 	http.HandleFunc("/", h.ServeHTTP)
 
